@@ -13,4 +13,6 @@ public class NoteService {
     // TODO (21/09/2023): method to extract all the words contained in a file
 
     // TODO (22/09/2023): creating a story about the progress of the zettelkasten. i want to display graphs that show the trend over time based on the chosen filters
+
+    // TODO (22/09/2023): find a way to distinguish completed notes from uncompleted ones
 }
