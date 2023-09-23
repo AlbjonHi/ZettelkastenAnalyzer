@@ -13,7 +13,5 @@ import lombok.NoArgsConstructor;
 public class Note {
 
     @Id
-    private String name;
-    private int words;
-    private int size;
+    private Priority priority;
 }
