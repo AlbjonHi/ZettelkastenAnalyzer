@@ -2,16 +2,23 @@ package com.amarildo.zettelkastenanalyzer;
 
 
 import com.amarildo.zettelkastenanalyzer.model.Note;
+import com.amarildo.zettelkastenanalyzer.model.Priority;
 import com.amarildo.zettelkastenanalyzer.repository.NoteRepository;
 import com.github.javafaker.Faker;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
+import java.util.Random;
+
 @Component
 public class NoteDataGenerator implements CommandLineRunner {
 
-    NoteRepository noteRepository;
+    private static final int NUMBER_OF_RANDOM_NOTES = 100;
+    private static final int WORDS_PER_NOTE = 10;
+
+    private final Random random = new Random();
+    private final NoteRepository noteRepository;
 
     @Autowired
     public NoteDataGenerator(NoteRepository noteRepository) {
@@ -19,15 +26,23 @@ public class NoteDataGenerator implements CommandLineRunner {
     }
 
     @Override
-    public void run(String... args) throws Exception {
+    public void run(String... args) {
         Faker faker = new Faker();
 
-        int numberOfRandomNotes = 100;
-        for (int i = 0; i < numberOfRandomNotes; i++) {
+        for (int i = 0; i < NUMBER_OF_RANDOM_NOTES; i++) {
+
             String title = faker.book().title();
-            int words = faker.number().numberBetween(100, 5000);
-            int size = faker.number().numberBetween(5000, 10000);
-            noteRepository.save(new Note(title, words, size));
+
+            String text = String.join(" ", faker.lorem().words(WORDS_PER_NOTE));
+
+            String category = "Java";
+
+            Priority[] priorities = Priority.values();
+            Priority priority = priorities[random.nextInt(priorities.length)];
+
+            boolean addedToAnki = faker.bool().bool();
+
+            noteRepository.save(new Note(title, text, category, priority, addedToAnki));
         }
     }
 }
