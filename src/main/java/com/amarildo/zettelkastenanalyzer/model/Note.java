@@ -22,7 +22,7 @@ public class Note {
     private String title;
 
     @Lob
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "CLOB")
     private String content;
 
     @Column(nullable = false)
