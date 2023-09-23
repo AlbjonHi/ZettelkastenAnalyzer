@@ -7,7 +7,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.junit.jupiter.api.Assertions.fail;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * @author aaliaj
@@ -25,25 +31,109 @@ class NoteServiceTest {
         NoteService noteService;
 
         @Test
-        @DisplayName("Test name")
-        void testName() {
+        @DisplayName("empty file")
+        void emptyFile() throws IOException {
             // given
-            String expected;
+            when(noteService.readContentFile(filePath)).thenReturn("");
+            List<String> expected = new ArrayList<>();
 
             // when
-            String actual;
+            List<String> actual = noteService.extractWordsFromFile(filePath);
 
             // then
-            fail("Not implemented yet.");
-            // Assertions.assertEquals(expected, actual); // TODO (17/07/2023 - aaliaj): Da implementare
+            verify(noteService).readContentFile(filePath);
+            assertEquals(expected, actual);
         }
 
-// test cases:
-        // 1. empty file -> empty list
-        // 2. file with single word -> list with only one string
-        // 3. file with many words -> list with all the words in the file
-        // 4. file with punctuations/spaces -> list without punctuation (including `) but only with words
-        // 5. file with several lines -> list with only words
-        // 6. file with non-ascii special characters -> list with only the words (with also non-ascii characters)
+        @Test
+        @DisplayName("file with a single word")
+        void fileWithASingleWord() throws IOException {
+            // given
+            when(noteService.readContentFile(filePath)).thenReturn("word");
+            List<String> expected = List.of("word");
+
+            // when
+            List<String> actual = noteService.extractWordsFromFile(filePath);
+
+            // then
+            verify(noteService).readContentFile(filePath);
+            assertEquals(expected, actual);
+        }
+
+        @Test
+        @DisplayName("file with many words")
+        void fileWithManyWords() throws IOException {
+            // given
+            when(noteService.readContentFile(filePath)).thenReturn("first second third");
+            List<String> expected = List.of("first", "second", "third");
+
+            // when
+            List<String> actual = noteService.extractWordsFromFile(filePath);
+
+            // then
+            verify(noteService).readContentFile(filePath);
+            assertEquals(expected, actual);
+        }
+
+        @Test
+        @DisplayName("file with punctuations")
+        void fileWithPunctuations() throws IOException {
+            // given
+            when(noteService.readContentFile(filePath)).thenReturn("first; second. third/");
+            List<String> expected = List.of("first", "second", "third");
+
+            // when
+            List<String> actual = noteService.extractWordsFromFile(filePath);
+
+            // then
+            verify(noteService).readContentFile(filePath);
+            assertEquals(expected, actual);
+        }
+
+        @Test
+        @DisplayName("file with inline code block in markdown")
+        void fileWithInlineCodeBlockInMarkdown() throws IOException {
+            // given
+            when(noteService.readContentFile(filePath)).thenReturn("`code1` hello `code2`");
+            List<String> expected = List.of("code1", "hello", "code2");
+
+            // when
+            List<String> actual = noteService.extractWordsFromFile(filePath);
+
+            // then
+            verify(noteService).readContentFile(filePath);
+            assertEquals(expected, actual);
+        }
+
+        @Test
+        @DisplayName("file with several lines")
+        void fileWithSeveralLines() throws IOException {
+            // given
+            when(noteService.readContentFile(filePath)).thenReturn("hi\r\n how \r\n code2 ");
+            List<String> expected = List.of("hi", "how", "code2");
+
+            // when
+            List<String> actual = noteService.extractWordsFromFile(filePath);
+
+            // then
+            verify(noteService).readContentFile(filePath);
+            assertEquals(expected, actual);
+        }
+
+        @Test
+        @DisplayName("file with non ascii value")
+        void fileWithNonAsciiValue() throws IOException {
+            // given
+            when(noteService.readContentFile(filePath)).thenReturn("✅ how");
+            List<String> expected = List.of("✅", "how");
+
+            // when
+            List<String> actual = noteService.extractWordsFromFile(filePath);
+
+            // then
+            verify(noteService).readContentFile(filePath);
+            assertEquals(expected, actual);
+        }
+
     }
 }
