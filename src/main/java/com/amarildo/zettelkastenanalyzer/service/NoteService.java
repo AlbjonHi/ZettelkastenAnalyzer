@@ -3,8 +3,12 @@ package com.amarildo.zettelkastenanalyzer.service;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -24,6 +28,31 @@ public class NoteService {
     // line 2. -> [[Priority = ✅]] (✅ = COMPLETED, 🔝 = HIGH, 🛠️ = MEDIUM, ⏳ = LOW)
     // line 3. -> [[Anki = ⛔]]
     // not all notes have this format. manage the eventuality
+
+    public void fileVisitorOnTree(String rootDir) throws IOException {
+        Path startDir = Paths.get(rootDir);
+
+        Files.walkFileTree(startDir, new SimpleFileVisitor<>() {
+
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                System.out.println("File: " + file);
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+                System.out.println("Directory: " + dir);
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
+                System.err.println("Error visiting file: " + file + " - " + exc.getMessage());
+                return FileVisitResult.CONTINUE;
+            }
+        });
+    }
 
     /**
      * Extracts words from a specified file and returns them as a list of strings.
