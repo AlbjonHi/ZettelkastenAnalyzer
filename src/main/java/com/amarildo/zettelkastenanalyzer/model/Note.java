@@ -13,5 +13,9 @@ import lombok.NoArgsConstructor;
 public class Note {
 
     @Id
+    private String title;
+    private String text;
+    private String category;
     private Priority priority;
+    private boolean notesAddedToAnki;
 }
