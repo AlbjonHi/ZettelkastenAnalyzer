@@ -1,5 +1,7 @@
 package com.amarildo.zettelkastenanalyzer.service;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -12,9 +14,8 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
 import java.util.stream.Stream;
 
+@Slf4j
 public class NoteService {
-
-    // TODO (21/09/2023): method for parsing a folder hierarchy recursively file by file
 
     // TODO (21/09/2023): method to extract all the words contained in a file
 
@@ -29,26 +30,33 @@ public class NoteService {
     // line 3. -> [[Anki = ⛔]]
     // not all notes have this format. manage the eventuality
 
-    public void fileVisitorOnTree(String rootDir) throws IOException {
-        Path startDir = Paths.get(rootDir);
+    public void fileVisitorOnTree(String rootDir, List<String> skipFolders) throws IOException {
+        Path startingDir = Paths.get(rootDir);
 
-        Files.walkFileTree(startDir, new SimpleFileVisitor<>() {
+        Files.walkFileTree(startingDir, new SimpleFileVisitor<>() {
 
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                System.out.println("File: " + file);
+                if (file.toString().endsWith(".md")) {
+                    log.info("Markdown File: " + file);
+                }
                 return FileVisitResult.CONTINUE;
             }
 
             @Override
             public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-                System.out.println("Directory: " + dir);
-                return FileVisitResult.CONTINUE;
+                String folderName = dir.getFileName().toString();
+
+                if (skipFolders.contains(folderName)) {
+                    return FileVisitResult.SKIP_SUBTREE;
+                } else {
+                    return FileVisitResult.CONTINUE;
+                }
             }
 
             @Override
             public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
-                System.err.println("Error visiting file: " + file + " - " + exc.getMessage());
+                log.error("Error visiting file: " + file + " - " + exc.getMessage());
                 return FileVisitResult.CONTINUE;
             }
         });
