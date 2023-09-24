@@ -1,48 +1,32 @@
 package com.amarildo.zettelkastenanalyzer;
 
 
-import com.amarildo.zettelkastenanalyzer.model.Note;
-import com.amarildo.zettelkastenanalyzer.model.Priority;
-import com.amarildo.zettelkastenanalyzer.repository.NoteRepository;
-import com.github.javafaker.Faker;
+import com.amarildo.zettelkastenanalyzer.service.NoteService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
-import java.util.Random;
+import java.io.IOException;
+import java.util.List;
 
 @Component
 public class NoteDataGenerator implements CommandLineRunner {
 
-    private static final int NUMBER_OF_RANDOM_NOTES = 100;
-    private static final int WORDS_PER_NOTE = 10;
-
-    private final Random random = new Random();
-    private final NoteRepository noteRepository;
+    private final NoteService noteService;
 
     @Autowired
-    public NoteDataGenerator(NoteRepository noteRepository) {
-        this.noteRepository = noteRepository;
+    public NoteDataGenerator(NoteService noteService) {
+        this.noteService = noteService;
     }
 
     @Override
-    public void run(String... args) {
-        Faker faker = new Faker();
+    public void run(String... args) throws IOException {
 
-        for (int i = 0; i < NUMBER_OF_RANDOM_NOTES; i++) {
+        noteService.fileVisitorOnTree("C:\\Users\\aaliaj\\Documents\\Zettelkasten",
+                List.of(
+                        ".git",
+                        "immagini",
+                        ".obsidian"));
 
-            String title = faker.book().title();
-
-            String text = String.join(" ", faker.lorem().words(WORDS_PER_NOTE));
-
-            String category = "Java";
-
-            Priority[] priorities = Priority.values();
-            Priority priority = priorities[random.nextInt(priorities.length)];
-
-            boolean addedToAnki = faker.bool().bool();
-
-            noteRepository.save(new Note(title, text, category, priority, addedToAnki));
-        }
     }
 }
