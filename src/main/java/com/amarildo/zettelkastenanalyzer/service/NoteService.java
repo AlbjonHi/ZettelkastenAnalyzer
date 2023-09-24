@@ -76,8 +76,8 @@ public class NoteService {
             return List.of();
         }
 
-        return Stream.of(fileContent.split("\\s+"))
-                .map(word -> word.replaceAll("[\\p{Punct}']", "")) // Combine both replacements
+        return Stream.of(fileContent.split("[[#,.\\[\\]/()`!\\\"$%*}{\\\\_':;=?\\-<>+|\\r\\n\\s][0-9]]"))
+                .map(String::toLowerCase)
                 .toList();
     }
 
