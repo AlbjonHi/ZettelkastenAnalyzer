@@ -194,8 +194,8 @@ public class NoteService {
      * @return True if the file has changed, false otherwise (or if it doesn't exist in the repository).
      */
     public boolean isFileChanged(Path filePath) {
-        String fileName = getFileNameFromPath(filePath);
-        return noteRepository.getNoteByFileName(fileName)
+        String fileName = getFileNameFromPath(filePath).split("\\.")[0];
+        return noteRepository.findByFileName(fileName)
                 .map(oldNote -> !oldNote.getHash().equals(calculateFileHash(filePath.toString())))
                 .orElse(true);
     }

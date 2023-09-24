@@ -4,20 +4,25 @@ import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 
 import java.util.Set;
 
 @AllArgsConstructor
 @NoArgsConstructor
-@Data
+@Getter
+@Setter
+@ToString
 @Entity
-@Table(name = "Note")
+@Table(name = "note")
 public class Note {
 
     @Id
@@ -25,7 +30,7 @@ public class Note {
 
     private String hash;
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.LAZY)
     @OrderColumn
     private Set<String> words;
 
@@ -34,5 +39,4 @@ public class Note {
     @Enumerated(EnumType.STRING)
     private Priority priority;
 
-    // puoi creare qui un metodo setter per hash che crei l'hash partendo da 'content'
 }
