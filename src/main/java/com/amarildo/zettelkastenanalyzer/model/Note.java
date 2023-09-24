@@ -1,6 +1,5 @@
 package com.amarildo.zettelkastenanalyzer.model;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -33,9 +32,7 @@ public class Note {
     private String category;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private Priority priority;
 
-    @Column(name = "notes_added_to_anki")
-    private boolean notesAddedToAnki;
+    // puoi creare qui un metodo setter per hash che crei l'hash partendo da 'content'
 }
