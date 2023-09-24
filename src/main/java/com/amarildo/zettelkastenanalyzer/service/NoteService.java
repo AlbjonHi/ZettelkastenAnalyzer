@@ -247,6 +247,7 @@ public class NoteService {
 
         return Stream.of(fileContent.split("[[#,.\\[\\]/()`!\\\"$%*}{\\\\_':;=?\\-<>+|\\r\\n\\s][0-9]]"))
                 .filter(word -> !word.isEmpty())
+                .filter(word -> word.length() > 1)
                 .map(String::toLowerCase)
                 .toList();
     }
