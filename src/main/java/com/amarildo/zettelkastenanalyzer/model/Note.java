@@ -1,15 +1,18 @@
 package com.amarildo.zettelkastenanalyzer.model;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
+import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.Set;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -19,13 +22,14 @@ import lombok.NoArgsConstructor;
 public class Note {
 
     @Id
-    private String title;
+    private String fileName;
 
-    @Lob
-    @Column(nullable = false, columnDefinition = "CLOB")
-    private String content;
+    private String hash;
 
-    @Column(nullable = false)
+    @ElementCollection
+    @OrderColumn
+    private Set<String> words;
+
     private String category;
 
     @Enumerated(EnumType.STRING)
