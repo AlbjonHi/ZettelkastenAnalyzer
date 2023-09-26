@@ -31,9 +31,27 @@ public class NoteService {
 
     NoteRepository noteRepository;
 
+    NoteFinder noteFinder;
+
     @Autowired
-    public NoteService(NoteRepository noteRepository) {
+    public NoteService(NoteRepository noteRepository, NoteFinder noteFinder) {
         this.noteRepository = noteRepository;
+        this.noteFinder = noteFinder;
+    }
+
+    /**
+     * Loads data from the database into the noteFinder and logs the process.
+     */
+    public void loadDatabase() {
+        List<Note> allNotes = noteRepository.findAll();
+        noteFinder.clearMap();
+
+        allNotes.forEach(note -> {
+            noteFinder.addNote(note);
+            log.info("Adding note to the map: {}", note.getFileName());
+        });
+
+        log.info("Finished adding notes to the map!");
     }
 
     /**
@@ -112,7 +130,7 @@ public class NoteService {
      * @return An Optional containing a Note object with extracted information if successful,
      * or an empty Optional if the file is unchanged or an error occurs during extraction.
      */
-    public Optional<Note> extractInfoFromFile(Path filePath) {
+    private Optional<Note> extractInfoFromFile(Path filePath) {
 
         if (!isFileChanged(filePath)) {
             return Optional.empty();
@@ -193,7 +211,7 @@ public class NoteService {
      * @param filePath The path of the file to check.
      * @return True if the file has changed, false otherwise (or if it doesn't exist in the repository).
      */
-    public boolean isFileChanged(Path filePath) {
+    private boolean isFileChanged(Path filePath) {
         String fileName = getFileNameFromPath(filePath).split("\\.")[0];
         return noteRepository.findByFileName(fileName)
                 .map(oldNote -> !oldNote.getHash().equals(calculateFileHash(filePath.toString())))
@@ -233,7 +251,7 @@ public class NoteService {
      * @return A list of words extracted from the file. If the file is empty or cannot be
      * read, an empty list is returned.
      */
-    public List<String> extractWordsFromFile(String filePath) {
+    private List<String> extractWordsFromFile(String filePath) {
         Optional<String> optionalFileContent = readContentFile(filePath);
 
         if (optionalFileContent.isEmpty()) {
@@ -259,7 +277,7 @@ public class NoteService {
      * @return The content of the file as a string.
      * @throws IOException If an I/O error occurs or if the file does not exist or is a directory.
      */
-    Optional<String> readContentFile(String filePath) {
+    private Optional<String> readContentFile(String filePath) {
 
         Path path = Path.of(filePath);
 
