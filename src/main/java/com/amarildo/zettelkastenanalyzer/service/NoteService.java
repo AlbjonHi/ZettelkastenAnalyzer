@@ -1,6 +1,7 @@
 package com.amarildo.zettelkastenanalyzer.service;
 
 import com.amarildo.zettelkastenanalyzer.model.Note;
+import com.amarildo.zettelkastenanalyzer.model.Priority;
 import com.amarildo.zettelkastenanalyzer.repository.NoteRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +21,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 @Slf4j
@@ -28,57 +31,137 @@ public class NoteService {
 
     NoteRepository noteRepository;
 
+    NoteFinder noteFinder;
+
     @Autowired
-    public NoteService(NoteRepository noteRepository) {
+    public NoteService(NoteRepository noteRepository, NoteFinder noteFinder) {
         this.noteRepository = noteRepository;
+        this.noteFinder = noteFinder;
     }
 
-    // TODO (22/09/2023): creating a story about the progress of the zettelkasten. i want to display graphs that show the trend over time based on the chosen filters
+    /**
+     * Loads data from the database into the noteFinder and logs the process.
+     */
+    public void loadDatabase() {
+        List<Note> allNotes = noteRepository.findAll();
+        noteFinder.clearMap();
 
-    // TODO (23/09/2023): method get note category, priority and notesAddedToAnki from the first lines of the note
-    // a generic file starts like this:
-    // line 1. -> [[CATEGORY_MOC]]
-    // line 2. -> [[Priority = ✅]] (✅ = COMPLETED, 🔝 = HIGH, 🛠️ = MEDIUM, ⏳ = LOW)
-    // line 3. -> [[Anki = ⛔]]
-    // not all notes have this format. manage the eventuality
+        allNotes.forEach(note -> {
+            noteFinder.addNote(note);
+            log.info("Adding note to the map: {}", note.getFileName());
+        });
 
-    public void fileVisitorOnTree(String rootDir, List<String> skipFolders) throws IOException {
+        log.info("Finished adding notes to the map!");
+    }
+
+    /**
+     * Recursively traverses a directory tree starting from the specified root directory,
+     * processes Markdown files, and checks for updates in a Zettelkasten system.
+     * <p>
+     * This method walks the file tree rooted at 'rootDir', invoking 'processMarkdownFile'
+     * for each Markdown file encountered. It also allows skipping specified folders based on
+     * the 'skipFolders' list.
+     *
+     * @param rootDir     The root directory from which to start the traversal.
+     * @param skipFolders A list of folder names to skip during traversal.
+     */
+    public void traverseAndCheckZettelkastenTree(String rootDir, List<String> skipFolders) {
         Path startingDir = Paths.get(rootDir);
 
-        Files.walkFileTree(startingDir, new SimpleFileVisitor<>() {
+        try {
+            Files.walkFileTree(startingDir, new SimpleFileVisitor<>() {
 
-            @Override
-            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                if (file.toString().endsWith(".md")) {
-                    Optional<Note> optionalNote = extractInfoFromFile(file);
-                    if (optionalNote.isPresent()) {
-                        log.info("Il file {} e' cambiato", file);
-                        noteRepository.save(optionalNote.get());
-                    } else {
-                        log.info("Il file {} non e' cambiato", file);
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                    if (file.toString().endsWith(".md")) {
+                        processMarkdownFile(file);
                     }
-                }
-                return FileVisitResult.CONTINUE;
-            }
-
-            @Override
-            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-                String folderName = dir.getFileName().toString();
-
-                if (skipFolders.contains(folderName)) {
-                    return FileVisitResult.SKIP_SUBTREE;
-                } else {
                     return FileVisitResult.CONTINUE;
                 }
+
+                @Override
+                public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+                    String folderName = dir.getFileName().toString();
+                    if (skipFolders.contains(folderName)) {
+                        return FileVisitResult.SKIP_SUBTREE;
+                    } else {
+                        return FileVisitResult.CONTINUE;
+                    }
+                }
+
+                @Override
+                public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
+                    log.error("Error visiting file: {} - {}", file, exc.getMessage());
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+
+            log.info("Finished checking for updates on the Zettelkasten files");
+        } catch (IOException e) {
+            log.error("Error while traversing files: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Processes a Markdown file, extracts information, and saves it to a repository if changed.
+     * <p>
+     * This method extracts information from the specified Markdown file using 'extractInfoFromFile'
+     * and checks if the information has changed. If changed, it logs the update and saves the
+     * extracted information to the 'noteRepository'.
+     *
+     * @param file The path to the Markdown file to process.
+     */
+    private void processMarkdownFile(Path file) {
+        Optional<Note> optionalNote = extractInfoFromFile(file);
+        if (optionalNote.isPresent()) {
+            log.info("The file {} has changed", file);
+            noteRepository.save(optionalNote.get());
+        }
+    }
+
+    /**
+     * Extracts information from a file and creates a Note object.
+     * <p>
+     * This method reads the contents of the specified file and extracts relevant information,
+     * including the file name without extension, a hash of the file content, unique words in the file,
+     * a category extracted from the first line, and a priority extracted from the second line.
+     *
+     * @param filePath The path to the file from which information is to be extracted.
+     * @return An Optional containing a Note object with extracted information if successful,
+     * or an empty Optional if the file is unchanged or an error occurs during extraction.
+     */
+    private Optional<Note> extractInfoFromFile(Path filePath) {
+
+        if (!isFileChanged(filePath)) {
+            return Optional.empty();
+        }
+
+        try {
+            String fileNameWithoutExtension = filePath.getFileName().toString().replaceFirst("[.][^.]+$", "");
+            String fileHash = calculateFileHash(filePath.toString());
+            Set<String> uniqueWordsInFile = new HashSet<>(extractWordsFromFile(filePath.toString()));
+
+            List<String> fileLines = Files.readAllLines(filePath);
+
+            if (fileLines.size() < 3) {
+                return Optional.empty();
             }
 
-            @Override
-            public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
-                log.error("Error visiting file: " + file + " - " + exc.getMessage());
-                return FileVisitResult.CONTINUE;
-            }
-        });
-        System.out.println("Done!");
+            String firstLine = fileLines.get(0);
+            String firstLinePatternString = "\\[\\[([A-Z]+)_MOC\\]\\]";
+            Pattern pattern = Pattern.compile(firstLinePatternString);
+            Matcher matcher = pattern.matcher(firstLine);
+            String category = matcher.find() ? matcher.group(1) : null;
+
+            String secondLine = fileLines.get(1);
+            String prioritySymbol = secondLine.replaceAll("[^\\p{So}]", "");
+            Priority priority = mapPrioritySymbol(prioritySymbol);
+
+            return Optional.of(new Note(fileNameWithoutExtension, fileHash, uniqueWordsInFile, category, priority));
+        } catch (IOException ioe) {
+            log.warn("File ({}) reading error", filePath, ioe);
+            return Optional.empty();
+        }
     }
 
     /**
@@ -128,9 +211,9 @@ public class NoteService {
      * @param filePath The path of the file to check.
      * @return True if the file has changed, false otherwise (or if it doesn't exist in the repository).
      */
-    public boolean isFileChanged(Path filePath) {
-        String fileName = getFileNameFromPath(filePath);
-        return noteRepository.getNoteByFileName(fileName)
+    private boolean isFileChanged(Path filePath) {
+        String fileName = getFileNameFromPath(filePath).split("\\.")[0];
+        return noteRepository.findByFileName(fileName)
                 .map(oldNote -> !oldNote.getHash().equals(calculateFileHash(filePath.toString())))
                 .orElse(true);
     }
@@ -145,54 +228,44 @@ public class NoteService {
         return filePath.getFileName().toString();
     }
 
-    // TODO (24/09/2023): to be completed
-    public Optional<Note> extractInfoFromFile(Path filePath) {
-
-        boolean fileChanged = isFileChanged(filePath);
-        if (!fileChanged) {
-            return Optional.empty();
-        }
-
-        // get file name
-        String fileName = getFileNameFromPath(filePath)
-                .split("\\.")[0]; // without '.md'
-
-        // hash
-        String hash = calculateFileHash(filePath.toString());
-
-        // words
-        Set<String> uniqueWords = new HashSet<>();
-        try {
-            List<String> words = extractWordsFromFile(filePath.toString());
-            uniqueWords.addAll(words);
-        } catch (IOException ioe) {
-            log.warn("File ({}) reading error", filePath, ioe);
-        }
-
-        // get category
-
-        // get priority'
-
-        // get anki
-
-        return Optional.of(new Note(fileName, hash, uniqueWords, null, null, false));
+    /**
+     * Maps a priority symbol to a corresponding Priority enum value.
+     *
+     * @param prioritySymbol The priority symbol to be mapped.
+     * @return The Priority enum value associated with the given symbol, or null if no match is found.
+     */
+    private Priority mapPrioritySymbol(String prioritySymbol) {
+        return switch (prioritySymbol) {
+            case "✅" -> Priority.COMPLETED;
+            case "🔝" -> Priority.HIGH;
+            case "🛠️" -> Priority.MEDIUM;
+            case "⏳" -> Priority.LOW;
+            default -> null;
+        };
     }
 
     /**
-     * Extracts words from a specified file and returns them as a list of strings.
+     * Extracts words from a file specified by the given file path.
      *
-     * @param filePath The path of the file from which to extract words.
-     * @return A list of strings containing the words extracted from the file.
-     * @throws IOException If an error occurs while reading the file.
+     * @param filePath The path to the file to extract words from.
+     * @return A list of words extracted from the file. If the file is empty or cannot be
+     * read, an empty list is returned.
      */
-    public List<String> extractWordsFromFile(String filePath) throws IOException {
-        String fileContent = readContentFile(filePath);
+    private List<String> extractWordsFromFile(String filePath) {
+        Optional<String> optionalFileContent = readContentFile(filePath);
 
+        if (optionalFileContent.isEmpty()) {
+            return List.of();
+        }
+
+        String fileContent = optionalFileContent.get();
         if (fileContent.isEmpty()) {
             return List.of();
         }
 
         return Stream.of(fileContent.split("[[#,.\\[\\]/()`!\\\"$%*}{\\\\_':;=?\\-<>+|\\r\\n\\s][0-9]]"))
+                .filter(word -> !word.isEmpty())
+                .filter(word -> word.length() > 1)
                 .map(String::toLowerCase)
                 .toList();
     }
@@ -204,15 +277,20 @@ public class NoteService {
      * @return The content of the file as a string.
      * @throws IOException If an I/O error occurs or if the file does not exist or is a directory.
      */
-    String readContentFile(String filePath) throws IOException {
+    private Optional<String> readContentFile(String filePath) {
 
         Path path = Path.of(filePath);
 
         // Check if the file exists and is not a directory
         if (!Files.isRegularFile(path)) {
-            throw new IOException("The file does not exist or is a directory");
+            log.warn("The file ({}) does not exist or is a directory", filePath);
         }
 
-        return Files.readString(path, StandardCharsets.UTF_8);
+        try {
+            return Optional.of(Files.readString(path, StandardCharsets.UTF_8));
+        } catch (IOException ioe) {
+            log.warn("File ({}) reading error", filePath, ioe);
+            return Optional.empty();
+        }
     }
 }

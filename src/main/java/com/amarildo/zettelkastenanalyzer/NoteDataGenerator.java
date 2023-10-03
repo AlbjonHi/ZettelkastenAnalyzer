@@ -22,7 +22,7 @@ public class NoteDataGenerator implements CommandLineRunner {
     @Override
     public void run(String... args) throws IOException {
 
-        noteService.fileVisitorOnTree("C:\\Users\\aaliaj\\Documents\\Zettelkasten",
+        noteService.traverseAndCheckZettelkastenTree("C:\\Users\\aaliaj\\Documents\\Zettelkasten",
                 List.of(
                         ".git",
                         "immagini",

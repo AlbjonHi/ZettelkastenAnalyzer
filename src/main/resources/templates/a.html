@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link th:href="@{/webjars/bootstrap/5.3.2/css/bootstrap.min.css} " th:rel="stylesheet"/>
+
+    <style>
+        .scrollable-table {
+            height: 60vh;
+            width: 60vw;
+            overflow-y: auto;
+        }
+    </style>
+
+</head>
+
+<body>
+
+<div class="container-fluid">
+    <nav class="navbar navbar-light bg-light justify-content-between">
+        <a class="navbar-brand">Navbar</a>
+        <form action="/search" class="form-inline" method="POST">
+            <input aria-label="Search" class="form-control mr-sm-2" name="userInput" placeholder="Search" required
+                   type="text">
+            <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
+        </form>
+    </nav>
+</div>
+
+<div class="container d-flex flex-column align-items-center justify-content-center">
+    <table class="table">
+        <thead>
+        <tr>
+            <th>Note</th>
+            <th>Occurrences</th>
+        </tr>
+        </thead>
+        <tbody>
+        <!-- Itera sulla lista e crea le righe della tabella -->
+        <tr th:each="entry : ${MAPPA}">
+            <div th:with="endIndexSafe=${entry.key.fileName.length() >= 50 ? 50 : entry.key.fileName.length()}">
+                <td th:text="${#strings.substring(entry.key.fileName,0,endIndexSafe)}"></td>
+            </div>
+            <td th:text="${entry.value}"></td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<script th:src="@{/webjars/jquery/5.3.2/jquery.min.js}"></script>
+<script th:src="@{/webjars/popper.js/5.3.2/umd/popper.min.js}"></script>
+<script th:src="@{/webjars/bootstrap/5.3.2/js/bootstrap.min.js}"></script>
+
+</body>
+</html>

@@ -10,5 +10,5 @@ import java.util.Optional;
 @Repository
 public interface NoteRepository extends JpaRepository<Note, String> {
 
-    Optional<Note> getNoteByFileName(String fileName);
+    Optional<Note> findByFileName(String fileName);
 }
