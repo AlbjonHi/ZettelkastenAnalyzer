@@ -37,22 +37,45 @@ public class NoteFinder {
                 .add(note));
     }
 
+    public List<Map.Entry<String, Long>> getNotesNameAndOccurrences(List<String> wordstoSearch) {
+        List<Map.Entry<Note, Long>> notesByWordsWithCountsSorted = findNotesByWordsWithCountsSorted(wordstoSearch);
 
-    // Cerca entità Note per un elenco di parole
+        return notesByWordsWithCountsSorted.stream()
+                .map(entry -> {
+                    String fileName = entry.getKey().getFileName();
+                    Long occorrenze = entry.getValue();
+                    return Map.entry(fileName, occorrenze);
+                })
+                .collect(Collectors.toList());
+    }
 
     /**
-     * Finds notes based on a list of words to search for, including counts of occurrences, and sorts them in descending
-     * order.
+     * Find notes, check how often certain words appear in the names of note files and inside the notes themselves, and
+     * give back a list that shows the notes along with how many times those words were found. The list is arranged so
+     * that notes with the most occurrences come first.
      *
-     * @param wordsToSearch A list of words to search for.
-     * @return A list of map entries, where each entry contains a note and its count of occurrences, sorted in
-     * descending order of counts.
+     * @param wordsToSearch A list of words to search for in the names of note files.
+     * @return A list of entries where each entry contains a note and the count of occurrences of the searched words
+     * in the names of note files, sorted in descending order of count.
      */
     public List<Map.Entry<Note, Long>> findNotesByWordsWithCountsSorted(List<String> wordsToSearch) {
         return wordToNotesMap.entrySet().stream()
-                .filter(entry -> wordsToSearch.contains(entry.getKey())) // Filtra solo le parole di interesse.
-                .flatMap(entry -> entry.getValue().stream().map(note -> new AbstractMap.SimpleEntry<>(note, 1L)))
-                .collect(Collectors.groupingBy(Map.Entry::getKey, Collectors.counting()))
+                .filter(entry -> wordsToSearch.contains(entry.getKey()))
+                .flatMap(entry -> entry.getValue().stream()
+                        .map(note -> {
+
+                            long occ = 1L;
+
+                            String nomeFile = note.getFileName().toLowerCase();
+                            for (String toSearch : wordsToSearch) {
+                                if (nomeFile.contains(toSearch.toLowerCase())) { // se il nome contiene una delle parole cercate -> +1
+                                    occ++;
+                                }
+                            }
+
+                            return new AbstractMap.SimpleEntry<>(note, occ);
+                        }))
+                .collect(Collectors.groupingBy(Map.Entry::getKey, Collectors.summingLong(Map.Entry::getValue)))
                 .entrySet().stream()
                 .sorted(Map.Entry.<Note, Long>comparingByValue().reversed())
                 .toList();

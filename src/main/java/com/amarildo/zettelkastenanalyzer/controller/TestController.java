@@ -4,12 +4,15 @@ import com.amarildo.zettelkastenanalyzer.model.Note;
 import com.amarildo.zettelkastenanalyzer.service.NoteFinder;
 import com.amarildo.zettelkastenanalyzer.service.NoteService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 import java.util.Map;
@@ -18,6 +21,7 @@ import java.util.Map;
  * @author aaliaj
  */
 @Controller
+@CrossOrigin(origins = "http://localhost:3000")
 public class TestController {
 
     NoteService noteService;
@@ -30,16 +34,29 @@ public class TestController {
         this.noteFinder = noteFinder;
     }
 
-    @GetMapping
+    @GetMapping(path = "/")
     public String showForm(Model model) {
         noteService.loadDatabase();
-        return "a";
+        return "index";
     }
 
-    // TODO (26/09/2023 - aaliaj): aggiungere nell'interfaccia il numero totale di risultati della ricerca
-    // TODO (26/09/2023 - aaliaj): creare una pagina con react che filtra quello presente nella lista con tutto 
-    // TODO (26/09/2023 - aaliaj): senza inviare POST per aggioranre l'elenco 
+    /**
+     * React
+     */
+    @GetMapping(path = "/search")
+    public ResponseEntity<List<Map.Entry<String, Long>>> ciao(@RequestParam String words) {
 
+        String[] parole = words.split(" ");
+
+        List<Map.Entry<String, Long>> ciao = noteFinder.getNotesNameAndOccurrences(List.of(parole));
+
+        int toIndex = Math.min(ciao.size(), 50); // restituisco massimo 50 elementi
+        return ResponseEntity.ok(ciao.subList(0, toIndex));
+    }
+
+    /**
+     * Thymeleaf
+     */
     @PostMapping("/search")
     public String search(@ModelAttribute("userInput") String wordsss, BindingResult bindingResult, Model model) {
 

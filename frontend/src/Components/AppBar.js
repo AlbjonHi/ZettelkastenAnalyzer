@@ -5,7 +5,7 @@ import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
 import InputBase from '@mui/material/InputBase';
 import SearchIcon from '@mui/icons-material/Search';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import BasicTable from './BasicTable';
 
 const Search = styled('div')(({ theme }) => ({
@@ -48,40 +48,51 @@ export default function PrimarySearchAppBar() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [tableData, setTableData] = useState([]); // State to hold table data
+  const [debounceTimeout, setDebounceTimeout] = useState(null);
 
-
-  useEffect(() => {
+  const performSearch = (searchTerm) => {
     // Imposta l'URL del tuo endpoint di ricerca, sostituendo 'your-api-endpoint' con l'effettivo URL del tuo backend.
-    const apiUrl = `http://localhost:8080/cerca?words=${searchTerm}`;
-
-    /////////// Evitare di inviare anche se e' solo un carattere dato che nel db non ci sono caratteri singoli
+    const apiUrl = `http://localhost:8080/search?words=${searchTerm}`;
+  
     // Esegui la richiesta GET solo se il termine di ricerca non è vuoto.
     if (searchTerm !== '') {
       fetch(apiUrl)
         .then((response) => response.json())
         .then((data) => {
-          // Qui puoi gestire la risposta dalla tua API, ad esempio aggiornando lo stato del tuo componente con i risultati della ricerca.
-          console.log(data); // Stampa la risposta della ricerca.
-
+          // Qui puoi gestire la risposta dalla tua API e aggiornare lo stato con i risultati della ricerca.
+          console.log(data);
+          
           const mappedData = data.map((mapItem) => {
-            // Estrai la chiave e il valore dalla mappa
-          const key = Object.keys(mapItem)[0];
-          const value = mapItem[key];
-
-          // Restituisci un oggetto JavaScript con chiave e valore
-          return { key, value };
-        });
-          // Update the table data with the fetched data
+            const key = Object.keys(mapItem)[0];
+            const value = mapItem[key];
+            return { key, value };
+          });
+  
           setTableData(mappedData);
         })
         .catch((error) => {
           console.error(error);
         });
     }
-  }, [searchTerm]);
+  };
 
   const handleSearchChange = (event) => {
-    setSearchTerm(event.target.value);
+    const newSearchTerm = event.target.value;
+    setSearchTerm(newSearchTerm);
+  
+    // Cancella il timeout precedente se esiste
+    if (debounceTimeout) {
+      clearTimeout(debounceTimeout);
+    }
+  
+    // Imposta un nuovo timeout per 500ms
+    const newDebounceTimeout = setTimeout(() => {
+      // Esegui la ricerca dopo il timeout
+      performSearch(newSearchTerm);
+    }, 500);
+  
+    // Salva l'ID del timeout nel nuovo stato
+    setDebounceTimeout(newDebounceTimeout);
   };
 
   return (

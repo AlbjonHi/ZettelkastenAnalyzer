@@ -10,24 +10,24 @@ import Paper from '@mui/material/Paper';
 export default function BasicTable({ data }) {
 
   if (!data || data.length === 0) {
-    return null; // Handle case when data is empty or not available
+    return null; // Gestisci il caso in cui i dati sono vuoti o non disponibili
   }
 
   return (
     <div style={{ margin: '25px', display: 'flex', justifyContent: 'center' }}>
       <TableContainer component={Paper}>
-        <Table sx={{ minWidth: 650 }} aria-label="simple table">
+        <Table style={{ tableLayout: 'fixed' }} aria-label="simple table">
           <TableHead>
             <TableRow>
-              <TableCell align="left">Note</TableCell>
-              <TableCell align="right">Occurrencies</TableCell>
+              <TableCell style={{ width: '90%' }} align="left">Note</TableCell>
+              <TableCell style={{ width: '10%' }} align="right">Occurrencies</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {data.map((row, index) => (
-              <TableRow key={index}>
-                <TableCell align="left">{row.key}</TableCell>
-                <TableCell align="right">{row.value}</TableCell>
+              <TableRow key={index} className={index < 3 ? 'colored-row' : ''}>
+                <TableCell style={{ width: '90%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} align="left">{row.key}</TableCell>
+                <TableCell style={{ width: '10%' }} align="right">{row.value}</TableCell>
               </TableRow>
             ))}
           </TableBody>
