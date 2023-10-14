@@ -3,12 +3,7 @@ package com.amarildo.zettelkastenanalyzer.service;
 import com.amarildo.zettelkastenanalyzer.model.Note;
 import org.springframework.stereotype.Service;
 
-import java.util.AbstractMap;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -38,7 +33,7 @@ public class NoteFinder {
     }
 
     public List<Map.Entry<String, Long>> getNotesNameAndOccurrences(List<String> wordstoSearch) {
-        List<Map.Entry<Note, Long>> notesByWordsWithCountsSorted = findNotesByWordsWithCountsSorted(wordstoSearch);
+        List<Map.Entry<Note, Long>> notesByWordsWithCountsSorted = findNotesByWordsWithCountSorted(wordstoSearch);
 
         return notesByWordsWithCountsSorted.stream()
                 .map(entry -> {
@@ -49,38 +44,36 @@ public class NoteFinder {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Find notes, check how often certain words appear in the names of note files and inside the notes themselves, and
-     * give back a list that shows the notes along with how many times those words were found. The list is arranged so
-     * that notes with the most occurrences come first.
-     *
-     * @param wordsToSearch A list of words to search for in the names of note files.
-     * @return A list of entries where each entry contains a note and the count of occurrences of the searched words
-     * in the names of note files, sorted in descending order of count.
-     */
-    public List<Map.Entry<Note, Long>> findNotesByWordsWithCountsSorted(List<String> wordsToSearch) {
-        return wordToNotesMap.entrySet().stream()
-                .filter(entry -> wordsToSearch.contains(entry.getKey()))
-                .flatMap(entry -> entry.getValue().stream()
-                        .map(note -> {
 
-                            long occ = 1L;
-
-                            String nomeFile = note.getFileName().toLowerCase();
-                            for (String toSearch : wordsToSearch) {
-                                if (nomeFile.contains(toSearch.toLowerCase())) { // se il nome contiene una delle parole cercate -> +1
-                                    occ++;
-                                }
-                            }
-
-                            return new AbstractMap.SimpleEntry<>(note, occ);
-                        }))
-                .collect(Collectors.groupingBy(Map.Entry::getKey, Collectors.summingLong(Map.Entry::getValue)))
-                .entrySet().stream()
-                .sorted(Map.Entry.<Note, Long>comparingByValue().reversed())
+    public List<Map.Entry<Note, Long>> findNotesByWordsWithCountSorted(List<String> wordsToSearch) {
+        
+        List<Map.Entry<Note, Long>> ret = new ArrayList<>();
+        
+        for (String toSearch : wordsToSearch) {
+            if (wordToNotesMap.containsKey(toSearch)) {
+                Set<Note> notes = wordToNotesMap.get(toSearch);
+                for (Note note : notes) {
+                    String fileName = note.getFileName();
+                    Set<String> words = note.getWords();
+                    for (String word : words) {
+                        if (word.equals(toSearch)) {
+                            ret.add(new AbstractMap.SimpleEntry<>(note, 1L));
+                        }
+                    }
+                    if (fileName.toLowerCase().contains(toSearch)) {
+                        ret.add(new AbstractMap.SimpleEntry<>(note, 1L));
+                    }
+                }
+            }
+        }
+        
+        Map<Note, Long> collect = ret.stream()
+                .collect(Collectors.groupingBy(Map.Entry::getKey, Collectors.summingLong(Map.Entry::getValue)));
+        return collect.entrySet().stream()
+                .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
                 .toList();
     }
-
+    
     public void clearMap() {
         wordToNotesMap.clear();
     }
